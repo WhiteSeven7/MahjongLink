@@ -28,9 +28,31 @@ class Mahjong(pygame.sprite.Sprite):
         # 图像
         self.image = pygame.surface.Surface((44, 44))
         # 矩形
-        self.rect = self.image.get_rect(topleft=(pos[0] * 50, pos[1] * 50))
+        self.rect = self.image.get_rect(topleft=(pos[0] * 50 + 3, pos[1] * 50 + 3))
         # 根据id着色
         self.image.fill(self.colors[self.id])
+        # map
+        self._map = None
+
+    
+    def set_map(self, map: dict[tuple[int, int], "Mahjong"]):
+        self._map = map
+
+    def kill(self) -> None:
+        del self._map[self.pos]
+        return super().kill()
+
+
+class MahjongGroup(pygame.sprite.Group):
+    def __init__(self) -> None:
+        super().__init__()
+        self.map: dict[tuple[int, int], Mahjong] = {}
+
+    def add(self, *sprites: Mahjong) -> None:
+        for mahjong in sprites:
+            mahjong.set_map(self.map)
+            self.map[mahjong.pos] = mahjong
+        return super().add(*sprites)
 
 
 class Game:
@@ -41,9 +63,13 @@ class Game:
         self.clock = pygame.time.Clock()
         self.quit = False
         # 所有麻将
-        self.mahjong_group = pygame.sprite.Group()
+        self.mahjong_group = MahjongGroup()
+        # 麻将桌的尺寸
+        self.mohjong_x, self.mahjong_y = 12, 10
         # 生成麻将
         self.add_mohjong()
+        # 被点击的麻将
+        self.clicked_mohjong: list[Mahjong] = []
 
 
     def control(self):
@@ -53,12 +79,24 @@ class Game:
                 self.quit = True
                 continue
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                self.mahjong_group.empty()
-                self.add_mohjong()
+                mohjong: Mahjong
+                for mohjong in self.mahjong_group:
+                    if mohjong.rect.collidepoint(event.pos):
+                        self.clicked_mohjong.append(mohjong)
+                        break
 
 
     def update(self):
-        ...
+        if len(self.clicked_mohjong) < 2:
+            return
+        a, b, *_ = self.clicked_mohjong
+        if a.id != b.id:
+            self.clicked_mohjong.clear()
+            return
+        print("a == b !!!")
+        a.kill()
+        b.kill()
+        self.clicked_mohjong.clear()
     
 
     def draw(self):
@@ -83,9 +121,15 @@ class Game:
 
     def add_mohjong(self) -> None:
         """生成麻将"""
-        for y in range(8):
-            for x in range(10):
+        for y in range(1, self.mahjong_y - 1):
+            for x in range(1, self.mohjong_x - 1):
                 self.mahjong_group.add(Mahjong(random.randint(0, 9), (x, y)))
+
+    
+    def get_mohjong_path(self, a, b):
+        """拿到两个麻将之间的路径或 None"""
+
+        return None
 
 
 
